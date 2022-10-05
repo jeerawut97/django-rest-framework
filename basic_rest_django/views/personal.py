@@ -1,4 +1,4 @@
-from rest_framework import status, permissions
+from rest_framework import status, permissions, authentication, exceptions
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.parsers import JSONParser
@@ -9,15 +9,14 @@ from django.contrib.auth import authenticate
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope, TokenHasScope
+from rest_framework.authtoken.models import Token
 import json
 
 class Register(APIView):
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
-    # permission_classes = [IsAuthenticated]
+    authentication_classes = []
     permission_classes = []
     parser_classes = [JSONParser]
 
-    # create
     def post(self, request, *args, **kwargs):
         data = request.data
         if 'username' not in data:
@@ -78,34 +77,7 @@ class Register(APIView):
         }
         return Response(result, status=status.HTTP_201_CREATED)
 
-class Login(APIView):
-    permission_classes = []
-    parser_classes = [JSONParser]
-
-    def post(self, request, *args, **kwargs):
-        data = request.data
-        user = authenticate(username=data['username'], password=data['password'])
-        if user is not None:
-            print(user)
-            result = 'success'
-            return Response(result, status=status.HTTP_200_OK)
-        else:
-            return Response('authenticated failed', status=status.HTTP_401_UNAUTHORIZED)
-
-class Logout(APIView):
-    permission_classes = [permissions.IsAuthenticated, TokenHasReadWriteScope]
-    parser_classes = [JSONParser]
-
-    def post(self, request, *args, **kwargs):
-        pass
-
 class PersonalList(APIView):
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # permission_classes = [permissions.IsAuthenticated, TokenHasReadWriteScope]
-    permission_classes = []
-
-    # list
     def get(self, request, format=None, *args, **kwargs):
         result = [{
             'full_name' : f'{personal_info.user.first_name} {personal_info.user.last_name}',
@@ -119,12 +91,6 @@ class PersonalList(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 class PersonalGet(APIView):
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # permission_classes = [permissions.IsAuthenticated, TokenHasReadWriteScope]
-    permission_classes = []
-
-    # get
     def get(self, request, id, *args, **kwargs):
         try:
             personal = PersonalInformation.objects.get(id=id)
@@ -144,40 +110,37 @@ class PersonalGet(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 class PersonalUpdate(APIView):
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # permission_classes = [permissions.IsAuthenticated, TokenHasReadWriteScope]
-    permission_classes = []
     parser_classes = [JSONParser]
-
-    # put
     def put(self, request, id, *args, **kwargs):
         try:
             result = {}
             data = request.data
+            if not data:
+                return Response('error : invalid param', status=status.HTTP_400_BAD_REQUEST)
+
             personal = PersonalInformation.objects.get(id=id)
             if 'first_name' in data:
                 personal.user.first_name = data['first_name']
-                result['first_name'] = personal.first_name
             if 'last_name' in data:
                 personal.user.last_name = data['last_name']
-                result['last_name'] = personal.last_name
             if 'nick_name' in data:
                 personal.nick_name = data['nick_name']
-                result['nick_name'] = personal.nick_name
             if 'gender' in data:
                 personal.gender = personal.get_gender_display()
-                result['gender'] = personal.gender
             if 'age' in data:
                 personal.age = data['age']
-                result['age'] = personal.age
             if 'address' in data:
                 address = Address.objects.get(id=personal.address.id)
                 address.city = data['address']
-                result['address'] = address.city
                 address.save()
             personal.save()
             result['full_name'] =  f'{personal.user.first_name} {personal.user.last_name}'
+            result['first_name'] = personal.user.first_name
+            result['last_name'] = personal.user.last_name
+            result['nick_name'] = personal.nick_name
+            result['gender'] = personal.get_gender_display()
+            result['age'] = f'{personal.age}'
+            result['address'] = personal.address.city
         except PersonalInformation.DoesNotExist:
             return Response('error : personal not found', status=status.HTTP_404_NOT_FOUND)
         except Exception as error:
