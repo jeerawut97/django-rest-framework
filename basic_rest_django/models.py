@@ -36,3 +36,15 @@ class PersonalInformation(BaseModel):
     def get_full_name(self):
             return self.user.first_name + " " + self.user.last_name
 
+class Group(BaseModel):
+    name = models.CharField(max_length=128)
+    members = models.ManyToManyField(PersonalInformation, through='Membership')
+
+    def __str__(self):
+        return self.name
+
+class Membership(BaseModel):
+    person = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    invite_reason = models.CharField(max_length=64)
+
