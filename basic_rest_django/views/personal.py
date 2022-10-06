@@ -146,5 +146,3 @@ class PersonalUpdate(APIView):
         except Exception as error:
             return Response(f'error : {error}', status=status.HTTP_404_NOT_FOUND)
         return Response(result, status=status.HTTP_200_OK)
-
-
