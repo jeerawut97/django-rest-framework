@@ -14,4 +14,22 @@ services:
     # Copy changes made to the project to your image in real-time.
       - .:/django-rest-framework
     # Handles the command used to run the project in the Docker container.
-    command: sh -c "python manage.py runserver 0.0.0.0:8000" 
+    command: sh -c "python manage.py runserver 0.0.0.0:8000"
+
+    environment:
+      - DB_HOST=db
+      - DB_NAME=Learning_01
+      - DB_USER=postgres
+      - DB_PASS=12345678
+
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=Learning_01
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678

@@ -78,8 +78,8 @@ class Register(APIView):
         return Response(result, status=status.HTTP_201_CREATED)
 
 class PersonalList(APIView):
-    authentication_classes = []
-    permission_classes = []
+    # authentication_classes = []
+    # permission_classes = []
     def get(self, request, format=None, *args, **kwargs):
         result = [{
             'full_name' : f'{personal_info.user.first_name} {personal_info.user.last_name}',
@@ -93,8 +93,8 @@ class PersonalList(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 class PersonalGet(APIView):
-    authentication_classes = []
-    permission_classes = []
+    # authentication_classes = []
+    # permission_classes = []
     def get(self, request, id, *args, **kwargs):
         try:
             personal = PersonalInformation.objects.get(id=id)
@@ -114,8 +114,8 @@ class PersonalGet(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 class PersonalUpdate(APIView):
-    authentication_classes = []
-    permission_classes = []
+    # authentication_classes = []
+    # permission_classes = []
     parser_classes = [JSONParser]
     def put(self, request, id, *args, **kwargs):
         try:
