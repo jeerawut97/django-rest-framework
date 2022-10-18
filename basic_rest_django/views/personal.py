@@ -1,121 +1,144 @@
+from django.contrib.auth.models import User
 from rest_framework import status, permissions, authentication, exceptions
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db import transaction
+from django.http import JsonResponse
+from basic_rest_django.filter import PersonalFilter
+from basic_rest_django.model_serializer import PersonalModelSerializer, UserModelSerializer
 from basic_rest_django.models import *
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.permissions import IsAuthenticated
-from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope, TokenHasScope
-from rest_framework.authtoken.models import Token
+from basic_rest_django.model_serializer import *
+from rest_framework import filters
+import django_filters.rest_framework
 import json
+
 
 class Register(APIView):
     authentication_classes = []
     permission_classes = []
     parser_classes = [JSONParser]
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         data = request.data
-        if 'username' not in data:
-            return Response('username params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'password' not in data:
-            return Response('password params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'first_name' not in data:
-            return Response('first_name params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'last_name' not in data:
-            return Response('last_name params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'nick_name' not in data:
-            return Response('nick_name params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'gender' not in data:
-            return Response('gender params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'age' not in data:
-            return Response('age params not found', status=status.HTTP_400_BAD_REQUEST)
-        if 'address' not in data:
-            return Response('address params not found', status=status.HTTP_400_BAD_REQUEST)
-
-        if not isinstance(data['username'], str):
-            return Response('error type params : username', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['password'], str):
-            return Response('error type params : password', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['first_name'], str):
-            return Response('error type params : first_name', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['last_name'], str):
-            return Response('error type params : last_name', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['nick_name'], str):
-            return Response('error type params : nick_name', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['gender'], str):
-            return Response('error type params : gender', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['age'], int):
-            return Response('error type params : age', status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(data['address'], str):
-            return Response('error type params : address', status=status.HTTP_400_BAD_REQUEST)
-
+        save_point = transaction.savepoint()
         try:
-            User.objects.get(username=data['username'])
-            return Response('error : user duplicate', status=status.HTTP_404_NOT_FOUND)
-        except User.DoesNotExist:
-            user = User.objects.create(username=data['username'], first_name=data['first_name'], last_name=data['last_name'])
-            user.set_password(data['password'])
-            user.save()
-            del data['username'], data['password'], data['first_name'], data['last_name']
+            username = data.get('username')
+            password = data.get('password')
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            email = data.get('email')
+            city = data.get('address')
+            nick_name = data.get('nick_name')
+            gender = data.get('gender')
+            age = data.get('age')
 
-        address = Address.objects.create(city=data['address'])
-        personal_data = {**data, "user":user, "address": address}
-        personal = PersonalInformation.objects.create(**personal_data)
-        result = {
-            'username' : f'{personal.user.username}',
-            'full_name' : f'{personal.user.first_name} {personal.user.last_name}',
-            'first_name' : f'{personal.user.first_name}',
-            'last_name' : f'{personal.user.last_name}',
-            'nick_name' : f'{personal.nick_name}',
-            'gender' : f'{personal.get_gender_display()}',
-            'age' : f'{personal.age}',
-            'address' : f'{personal.address.city}'
-        }
+            if not username:
+                raise serializers.ValidationError({'username' : 'This field is required.'})
+            if not password:
+                raise serializers.ValidationError({'password' : 'This field is required.'})
+            if not first_name:
+                raise serializers.ValidationError({'first_name' : 'This field is required.'})
+            if not last_name:
+                raise serializers.ValidationError({'last_name' : 'This field is required.'})
+            if not email:
+                raise serializers.ValidationError({'email' : 'This field is required.'})
+            if not city:
+                raise serializers.ValidationError({'city' : 'This field is required.'})
+            if not nick_name:
+                raise serializers.ValidationError({'nick_name' : 'This field is required.'})
+            if not gender:
+                raise serializers.ValidationError({'gender' : 'This field is required.'})
+            if not age:
+                raise serializers.ValidationError({'age' : 'This field is required.'})
+
+            data_user = {'username':username, 'password':password, 'email':email}
+            user = UserModelSerializer().create(validated_data=data_user)
+            if not user:
+                raise Response('error : user duplicate', status=status.HTTP_404_NOT_FOUND)
+
+            data_addres = {'city':city}
+            addres = AddressModelSerializer(data=data_addres)
+            addres.is_valid(raise_exception=True)
+            addres.save()
+
+            data_personal = {'user':user.id, 'nick_name':nick_name, 'gender':gender, 'age':age, 'address':addres.data.get('id')}
+            personal = PersonalModelSerializer(data=data_personal)
+            personal.is_valid(raise_exception=True)
+            personal.save()
+            result = {
+                'username' : f'{username}',
+                'full_name' : f'{first_name} {last_name}',
+                'first_name' : f'{first_name}',
+                'last_name' : f'{last_name}',
+                'nick_name' : f'{nick_name}',
+                'gender' : personal.data.get('gender'),
+                'age' : f'{age}',
+                'address' : f'{city}'
+            }
+
+            transaction.savepoint_commit(save_point)
+        except Exception as error:
+            transaction.savepoint_rollback(save_point)
+            return Response(f'{error}', status=status.HTTP_404_NOT_FOUND)
+        finally:
+            transaction.clean_savepoints()
         return Response(result, status=status.HTTP_201_CREATED)
 
-class PersonalList(APIView):
-    # authentication_classes = []
-    # permission_classes = []
-    def get(self, request, format=None, *args, **kwargs):
-        result = [{
-            'full_name' : f'{personal_info.user.first_name} {personal_info.user.last_name}',
-            'first_name' : personal_info.user.first_name,
-            'last_name' : personal_info.user.last_name,
-            'nick_name' : personal_info.nick_name,
-            'gender' : personal_info.get_gender_display(),
-            'age' : personal_info.age,
-            'address' : personal_info.address.city
-        } for personal_info in PersonalInformation.objects.all()]
-        return Response(result, status=status.HTTP_200_OK)
+# class PersonalList(generics.ListAPIView):
+#     authentication_classes = []
+#     permission_classes = []
+#     queryset = PersonalInformation.objects.all()
+#     serializer_class = PersonalModelSerializer
+#     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+#     filterset_fields = ['user', 'nick_name', 'gender', 'age', 'address']
+#     search_fields = ['nick_name', 'gender']
+
+#     # def list(self, request):
+#     #     queryset = self.get_queryset()
+#     #     # print(queryset)
+#     #     serializer = PersonalModelSerializer(queryset, many=True)
+#     #     return Response(serializer.data)
+
+class PersonalList(generics.ListAPIView):
+    model = PersonalInformation
+    serializer_class = PersonalModelSerializer
+    filterset_class = PersonalFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        print(dir(user))
+        print(user.full_clean)
+        return Response(user.purchase_set.all(), status=status.HTTP_200_OK)
 
 class PersonalGet(APIView):
-    # authentication_classes = []
-    # permission_classes = []
+    authentication_classes = []
+    permission_classes = []
     def get(self, request, id, *args, **kwargs):
         try:
-            personal = PersonalInformation.objects.get(id=id)
+            personal = PersonalModelSerializer(PersonalInformation.objects.get(id=id)).data
         except PersonalInformation.DoesNotExist:
             return Response('error : personal not found', status=status.HTTP_200_OK)
         except Exception as error:
             return Response(f'error : {error}')
-        result = {
-            'full_name' : f'{personal.user.first_name} {personal.user.last_name}',
-            'first_name' : personal.user.first_name,
-            'last_name' : personal.user.last_name,
-            'nick_name' : personal.nick_name,
-            'gender' : personal.get_gender_display(),
-            'age' : personal.age,
-            'address' : personal.address.city
-        }
+        # result = {
+        #     'full_name' : f'{personal.user.first_name} {personal.user.last_name}',
+        #     'first_name' : personal.user.first_name,
+        #     'last_name' : personal.user.last_name,
+        #     'nick_name' : personal.nick_name,
+        #     'gender' : personal.get_gender_display(),
+        #     'age' : personal.age,
+        #     'address' : personal.address.city
+        # }
+        result = personal
         return Response(result, status=status.HTTP_200_OK)
 
 class PersonalUpdate(APIView):
-    # authentication_classes = []
-    # permission_classes = []
+    authentication_classes = []
+    permission_classes = []
     parser_classes = [JSONParser]
     def put(self, request, id, *args, **kwargs):
         try:

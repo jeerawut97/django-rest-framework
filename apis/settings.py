@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'basic_rest_django',
     'apis',
     'oauth2_provider',
+    'safedelete',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -91,12 +93,23 @@ WSGI_APPLICATION = 'apis.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('DB_NAME'), 
-        'USER': os.environ.get('DB_USER'), 
-        'PASSWORD': os.environ.get('DB_PASS'),
-        'HOST': os.environ.get('DB_HOST'),
+        'NAME': 'postgres', 
+        'USER': 'postgres', 
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
+        'PORT' : '5432'
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': os.environ.get('DB_NAME'), 
+#         'USER': os.environ.get('DB_USER'), 
+#         'PASSWORD': os.environ.get('DB_PASS'),
+#         'HOST': os.environ.get('DB_HOST'),
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -141,14 +154,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-    'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-
-   ],
-   'DEFAULT_PERMISSION_CLASSES': (
-        ['rest_framework.permissions.IsAuthenticated']
-   ),
-   'DEFAULT_PARSER_CLASSES': [
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
     ],
 }
 
