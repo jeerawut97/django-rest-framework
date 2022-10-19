@@ -34,8 +34,7 @@ class PersonalInformation(BaseModel):
     nick_name = models.CharField(max_length=30)
     gender = models.CharField(max_length=1, choices=gender_type)
     age = models.IntegerField(blank=True, null=True)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name="personal_address", blank=True, null=True)
-
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name="address", blank=True, null=True)
 
     def __str__(self) -> str:
         return f'{self.nick_name}'

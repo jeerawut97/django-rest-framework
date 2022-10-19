@@ -50,7 +50,7 @@ class PersonalModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PersonalInformation
-        fields = ['user', 'nick_name', 'gender', 'age', 'address', 'created_at']
+        fields = '__all__'
 
 class GroupModelSerializer(serializers.ModelSerializer):
     class Meta:

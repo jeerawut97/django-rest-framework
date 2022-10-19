@@ -4,15 +4,14 @@ from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.http import JsonResponse
 from basic_rest_django.filter import PersonalFilter
 from basic_rest_django.model_serializer import PersonalModelSerializer, UserModelSerializer
 from basic_rest_django.models import *
 from basic_rest_django.model_serializer import *
+from django_filters import rest_framework as djangoFilters
 from rest_framework import filters
-import django_filters.rest_framework
 import json
 
 
@@ -58,7 +57,7 @@ class Register(APIView):
             data_user = {'username':username, 'password':password, 'email':email}
             user = UserModelSerializer().create(validated_data=data_user)
             if not user:
-                raise Response('error : user duplicate', status=status.HTTP_404_NOT_FOUND)
+                raise Exception('error : user duplicate')
 
             data_addres = {'city':city}
             addres = AddressModelSerializer(data=data_addres)
@@ -104,15 +103,13 @@ class Register(APIView):
 #     #     return Response(serializer.data)
 
 class PersonalList(generics.ListAPIView):
-    model = PersonalInformation
+    queryset = PersonalInformation.objects.all()
     serializer_class = PersonalModelSerializer
     filterset_class = PersonalFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        print(dir(user))
-        print(user.full_clean)
-        return Response(user.purchase_set.all(), status=status.HTTP_200_OK)
+    filter_backends = [djangoFilters.DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nick_name', 'gender']
+    ordering_fields = ['user']
+    ordering = ['-user']
 
 class PersonalGet(APIView):
     authentication_classes = []
