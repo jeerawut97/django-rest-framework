@@ -1,18 +1,15 @@
-from django.contrib.auth.models import User
 from rest_framework import status, permissions, authentication, exceptions
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from django.db import transaction
-from django.http import JsonResponse
 from basic_rest_django.filter import PersonalFilter
 from basic_rest_django.model_serializer import PersonalModelSerializer, UserModelSerializer
 from basic_rest_django.models import *
 from basic_rest_django.model_serializer import *
 from django_filters import rest_framework as djangoFilters
 from rest_framework import filters
-import json
 
 
 class Register(APIView):
@@ -54,7 +51,7 @@ class Register(APIView):
             if not age:
                 raise serializers.ValidationError({'age' : 'This field is required.'})
 
-            data_user = {'username':username, 'password':password, 'email':email}
+            data_user = {'username':username, 'password':password, 'email':email, 'first_name':first_name, 'last_name':last_name}
             user = UserModelSerializer().create(validated_data=data_user)
             if not user:
                 raise Exception('error : user duplicate')
@@ -87,27 +84,12 @@ class Register(APIView):
             transaction.clean_savepoints()
         return Response(result, status=status.HTTP_201_CREATED)
 
-# class PersonalList(generics.ListAPIView):
-#     authentication_classes = []
-#     permission_classes = []
-#     queryset = PersonalInformation.objects.all()
-#     serializer_class = PersonalModelSerializer
-#     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-#     filterset_fields = ['user', 'nick_name', 'gender', 'age', 'address']
-#     search_fields = ['nick_name', 'gender']
-
-#     # def list(self, request):
-#     #     queryset = self.get_queryset()
-#     #     # print(queryset)
-#     #     serializer = PersonalModelSerializer(queryset, many=True)
-#     #     return Response(serializer.data)
-
 class PersonalList(generics.ListAPIView):
     queryset = PersonalInformation.objects.all()
     serializer_class = PersonalModelSerializer
     filterset_class = PersonalFilter
     filter_backends = [djangoFilters.DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['nick_name', 'gender']
+    search_fields = ['nick_name', 'gender', 'user__username', 'user__email', 'user__first_name', 'user__last_name', 'address__city']
     ordering_fields = ['user']
     ordering = ['-user']
 
@@ -118,9 +100,9 @@ class PersonalGet(APIView):
         try:
             personal = PersonalModelSerializer(PersonalInformation.objects.get(id=id)).data
         except PersonalInformation.DoesNotExist:
-            return Response('error : personal not found', status=status.HTTP_200_OK)
+            raise Exception('error : personal not found')
         except Exception as error:
-            return Response(f'error : {error}')
+            return Response(f'error : {error}', status=status.HTTP_404_NOT_FOUND)
         # result = {
         #     'full_name' : f'{personal.user.first_name} {personal.user.last_name}',
         #     'first_name' : personal.user.first_name,
@@ -130,8 +112,7 @@ class PersonalGet(APIView):
         #     'age' : personal.age,
         #     'address' : personal.address.city
         # }
-        result = personal
-        return Response(result, status=status.HTTP_200_OK)
+        return Response(personal, status=status.HTTP_200_OK)
 
 class PersonalUpdate(APIView):
     authentication_classes = []

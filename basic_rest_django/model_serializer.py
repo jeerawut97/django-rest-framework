@@ -11,8 +11,16 @@ class UserModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'email']
+        fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name']
         extra_kwargs = {'password': {'write_only': True}}
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        # data['fullname'] = '{} {}'.format(data['first_name'], data['last_name'])
+        data['fullname'] = f"{data['first_name']} {data['last_name']}"
+
+        return data
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -43,9 +51,19 @@ class AddressModelSerializer(serializers.ModelSerializer):
 class PersonalModelSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        
-        # data['user'] = PersonalModelSerializer(PersonalInformation.objects.get(id=data['user'])).data if 'user' in data else ''
+        try:
+            user = UserModelSerializer(User.objects.get(id=data['user'])).data
+        except User.DoesNotExist:
+            user = {}
+        try:
+            address = AddressModelSerializer(Address.objects.get(id=data['address'])).data
+        except Address.DoesNotExist:
+            address = {}
+
         data['gender'] = 'Men' if data['gender'] == 'M' else 'Women'
+        data['user'] = user
+        data['address'] =  address
+
         return data
 
     class Meta:
