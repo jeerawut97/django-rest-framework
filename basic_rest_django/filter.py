@@ -22,11 +22,16 @@ class PersonalFilter(filters.FilterSet):
         ('M', 'Men'),
         ('W', 'Women')
     )
-    user = filters.ModelChoiceFilter(field_name='user', queryset=User.objects.all())
+    # user = filters.ModelChoiceFilter(field_name='user', queryset=User.objects.all())
+    email = filters.CharFilter(field_name='user__email')
+    firstname = filters.CharFilter(field_name='user__first_name')
+    lastname = filters.CharFilter(field_name='user__last_name')
     nick_name = filters.CharFilter(field_name='nick_name')
     gender = filters.ChoiceFilter(field_name='gender', choices=gender_type)
     age = filters.NumberFilter(field_name='age')
-    address = filters.ModelChoiceFilter(field_name='address', queryset=Address.objects.all())
+    # address = filters.ModelChoiceFilter(field_name='address', queryset=Address.objects.all())
+    city = filters.CharFilter(field_name='address__city')
+    created_at = filters.DateTimeFromToRangeFilter(field_name='created_at')
 
     class Meta:
         model = PersonalInformation

@@ -9,7 +9,7 @@ User = get_user_model()
 
 # Create your models here.
 class BaseModel(SafeDeleteModel):
-    _safedelete_policy = HARD_DELETE_NOCASCADE
+    _safedelete_policy = SOFT_DELETE_CASCADE
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -30,11 +30,11 @@ class PersonalInformation(BaseModel):
         ('M', 'Men'),
         ('W', 'Women')
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user", blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user")
     nick_name = models.CharField(max_length=30)
     gender = models.CharField(max_length=1, choices=gender_type)
-    age = models.IntegerField(blank=True, null=True)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name="address", blank=True, null=True)
+    age = models.IntegerField()
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name="address")
 
     def __str__(self) -> str:
         return f'{self.nick_name}'
